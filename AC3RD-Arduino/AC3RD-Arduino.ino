@@ -38,7 +38,7 @@ double windDir;
 double windSpeed;
 double tailDir;
 double wingAngle;
-
+double rudderAngle;
 
 void setup(Task*me){
   Serial.begin(9600);
@@ -89,7 +89,7 @@ void main(Task* me){
 
   double goalHeading= //vector sum lonDiff and latDiff
   // need the angle difference between the goal heading and the current heading
-  headingAngleDiff= 
+  headingAngleDiff= goalHeading- heading
   //turn tail by the negative of the headingAngleDiff, assuming we are looking at that ratio still
   tailAngle= -headingAngleDiff
   // Set tail angle
