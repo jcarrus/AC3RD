@@ -24,6 +24,10 @@ Task getCurrentGPSTask(1000, getCurrentGPS);
 Task getGoalGPS(1000, getGoalGPS);
 Task readEnvironmentTask(100, readEnvironment);
 
+//create servo objects
+Servo tailservo
+Servo rudderservo 
+
 double goalGPSLat;
 double goalGPSLon;
 double currGPSLat;
@@ -83,16 +87,16 @@ void main(Task* me){
 
  // Compare to possible headings and select best. This will use the wind vector 
 
-  double goalHeading=
-
-
-  // Calculate optimal tail and rudder angles to point boat to goal heading
-tailangle=
+  double goalHeading= //vector sum lonDiff and latDiff
+  // need the angle difference between the goal heading and the current heading
+  headingAngleDiff= 
+  //turn tail by the negative of the headingAngleDiff, assuming we are looking at that ratio still
+  tailAngle= -headingAngleDiff
   // Set tail angle
-  servo.write();
+  tailservo.write(tailAngle);
 
   //Set rudder angle
-  servo.write();
+  rudderservo.write(rudderAngle);
 }
 
 
