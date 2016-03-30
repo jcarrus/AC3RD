@@ -6,13 +6,13 @@
 
 
 // Include library for GPS
-#include "Adafruit_GPS.h"
+//#include "Adafruit_GPS.h"
 
-// Include library for IMU
-//#include "LPS.h"
-//#include "LSM303.h"
-//#include "L3G.h"
-//#include "wire.h"
+//Include library for IMU
+#include "LPS.h"
+#include "LSM303.h"
+#include "L3G.h"
+#include "wire.h"
 
  
 //create variables
@@ -38,29 +38,29 @@ double rudderAngle;
 //float zeroWind_volts;
 //float WindSpeed_MPH;
 
-void setup(Task*me){
+void setup(){
   Serial.begin(9600);
 
-  //IMU
-  //wire.begin();
-  //compass.init();
-  //compass.enableDefault();
+  IMU
+  wire.begin();
+  compass.init();
+  compass.enableDefault();
   /*
   Calibration values; the default values of +/-32767 for each axis
   lead to an assumed magnetometer bias of 0. Use the Calibrate example
   program to determine appropriate values for your particular unit.
   */
- // compass.m_min = (LSM303::vector<int16_t>){-32767, -32767, -32767};
-  //compass.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
+  compass.m_min = (LSM303::vector<int16_t>){-32767, -32767, -32767};
+  compass.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
 
   // GPS
-  GPS.begin(9600)
+  //GPS.begin(9600)
 
   //include various configurations, need to set up the actual arduino
   //include pinModes
 }
 
-
+/*
  void getCurrentGPS(Task* me){
 
   // Do stuff to talk to GPS module- even if the position stays the same, want the data
@@ -71,19 +71,20 @@ void setup(Task*me){
   currGPSLon =GPS.longitude() ;
   currGPSangle=GPS.angle();
 }
-/*
+*/
+
 //Main task controls the motion of the boat
-void main(Task* me){
+void loop(){
   // Get heading from IMU
   heading=compass.read();
   headingLon=
   headingLat=
   // Calculate the heading to Goal GPS location
-  double lonDiff = goalGPSLon - currGPSLon;
-  double latDiff = goalGPSLat - currGPSLat;
+  //double lonDiff = goalGPSLon - currGPSLon;
+ // double latDiff = goalGPSLat - currGPSLat;
 
  // Compare to possible headings and select best. This will use the wind vector 
-
+/*
   double goalHeading= //vector sum lonDiff and latDiff
   // need the angle difference between the goal heading and the current heading
   headingAngleDiff= goalHeading- heading
@@ -93,11 +94,11 @@ void main(Task* me){
   tailservo.write(tailAngle);
 
   //Set rudder angle
-  rudderservo.write(rudderAngle);
+  //rudderservo.write(rudderAngle);
 }
 
+*?
 
-*/
 //read sail angle from rotary encoder
 
 // Updates global variables 
