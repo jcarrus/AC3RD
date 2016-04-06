@@ -39,6 +39,7 @@ double currGPSLat;
 double currGPSLon;
 double currGPSangle;
 float heading; //from IMU angle with true north
+float headingDesired;
 double windDir;
 double tailDir;
 double wingAngle; //relative to Front of the boat
@@ -153,8 +154,13 @@ void main(Task* me){
   double latDiff = goalGPSLat - currGPSLat;
   //convert this to an angle or we might be able to pull angles directly
   double angleDiff=goalGPSangle-currGPSangle
+  headingDesired=
   
-// we cannot go anywhere withing 45 degrees of the wind 
+// we cannot go anywhere withing 45 degrees of the wind
+// if the desired, most direct heading is not within 45 degrees of the wind, want to go in the direction of desired heading 
+  if (abs(windDir-headingDesired)>=45)
+  {}
+  else if 
   //know the heading in global and the mask angle in reference to hull (heading)
 
  // Compare to possible headings and select best. This will use the wind vector 
