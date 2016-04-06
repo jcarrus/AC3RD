@@ -20,6 +20,9 @@ SoftwareSerial Xbee(2,3); //RX TX
 
 //Include arduino servo library
 #include "servo.h"
+
+//potentiometer library
+
 //Main task deals with tail and wing angle, variables: heading, tailDir, wingAngle
 Task mainTask(50, main);
 Task getCurrentGPSTask(1000, getCurrentGPS);
@@ -30,16 +33,18 @@ Task readEnvironmentTask(100, readEnvironment);
 Servo tailservo
 Servo rudderservo 
 //create variables
-double goalGPSLat=0;
-double goalGPSLon=0;
-double currGPSLat;
+double goalGPSLat=0; //sent from xbee
+double goalGPSLon=0; //sent from xbee
+double currGPSLat; 
 double currGPSLon;
 double currGPSangle;
-float heading;
+float heading; //from IMU angle with true north
 double windDir;
 double tailDir;
-double wingAngle;
+double wingAngle; //relative to Front of the boat
 double rudderAngle;
+int potPinFront=3 //or whatever analog pin we use
+int potPinBack=4 //or whatever pin we use
 
 // put a glass over the wind sendor to calibrate it. adjust the zeroWindAdjustmet until sensor reads about zero
 //wind sensor calibration- need a 5V power source to wind sensor
@@ -123,19 +128,34 @@ void readEnvironment(){
     
       WindSpeed_MPH =  pow(((RV_Wind_Volts - zeroWind_volts) /.2300) , 2.7265); 
  
-  windDir=
 }
 
 
 //Main task controls the motion of the boat
 void main(Task* me){
   // Get heading from IMU
+  // heading is the angle of the IMU with true north
   heading=compass.read();
-  headingLon=
-  headingLat=
+  //find wingAngle with reference to absolute north
+  //attach potentiometers such that 90 on front is front of boat and 90 on back is the back of the boat 
+  int frontPotAngle= (map(analogread(potPinFront),0, 1023, 0, 330)
+  int backPotAngle= (map(analogread(potPinBack), 0, 1023, 0, 330))
+  if (frontPotAngle>=0 && frontPotAngle<=180)
+    {wingAngle=frontPotAngle-90}
+  else if (backPotAngle>=0 && backPotAngle<=180)
+    {wingAngle=backPotAngle+90}
+  
+  //know wind direction
+  windDir=heading-wingAngle-tailAngle
+ 
   // Calculate the heading to Goal GPS location
   double lonDiff = goalGPSLon - currGPSLon;
   double latDiff = goalGPSLat - currGPSLat;
+  //convert this to an angle or we might be able to pull angles directly
+  double angleDiff=goalGPSangle-currGPSangle
+  
+// we cannot go anywhere withing 45 degrees of the wind 
+  //know the heading in global and the mask angle in reference to hull (heading)
 
  // Compare to possible headings and select best. This will use the wind vector 
 
