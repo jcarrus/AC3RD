@@ -27,8 +27,8 @@
 #ifndef DELAYRUN_H
 #define DELAYRUN_H
 
-#include <SoftTimer.h>
-#include <Task.h>
+#include "SoftTimer.h"
+#include "Task.h"
 #include <Arduino.h>
 
 /**

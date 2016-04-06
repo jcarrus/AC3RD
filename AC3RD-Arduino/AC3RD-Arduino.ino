@@ -1,3 +1,4 @@
+
 /* This project
  *
  *
@@ -7,6 +8,11 @@
 
 // Include library for GPS
 #include "Adafruit_GPS.h"
+#include "Task.h"
+#include "SoftwareSerial.h"
+#include "SoftTimer.h"
+
+
 
 // Include library for IMU
 //#include "LPS.h"
@@ -24,7 +30,12 @@ double windDir;
 double tailDir;
 double wingAngle;
 double rudderAngle;
+Task GPStask(1000, getCurrentGPS);
 
+SoftwareSerial mySerial(8, 7);
+
+
+Adafruit_GPS GPS(&mySerial);
 // put a glass over the wind sendor to calibrate it. adjust the zeroWindAdjustmet until sensor reads about zero
 //wind sensor calibration- need a 5V power source to wind sensor
 //const float zeroWindAdjustment =  0; // negative numbers yield smaller wind speeds and vice versa.
@@ -38,9 +49,9 @@ double rudderAngle;
 //float zeroWind_volts;
 //float WindSpeed_MPH;
 
-void setup(Task*me){
+void setup(){
   Serial.begin(9600);
-
+  SoftTimer.add(&GPStask);
   //IMU
   //wire.begin();
   //compass.init();
@@ -54,8 +65,8 @@ void setup(Task*me){
   //compass.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
 
   // GPS
-  GPS.begin(9600)
-
+  GPS.begin(9600);
+  
   //include various configurations, need to set up the actual arduino
   //include pinModes
 }
@@ -67,9 +78,10 @@ void setup(Task*me){
   //parse data given in a NMEA string
   GPS.parse(GPS.lastNMEA());
   //get desired data
-  currGPSLat =GPS.latitude() ;
-  currGPSLon =GPS.longitude() ;
-  currGPSangle=GPS.angle();
+  currGPSLat =GPS.latitude ;
+  currGPSLon =GPS.longitude ;
+  currGPSangle=GPS.angle;
+  Serial.print(currGPSangle);
 }
 /*
 //Main task controls the motion of the boat

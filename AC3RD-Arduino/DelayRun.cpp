@@ -26,7 +26,7 @@
 
 #include "Arduino.h"
 #include "DelayRun.h"
-#include <Task.h>
+#include "Task.h"
 
 #define STATE_STARTING 0
 #define STATE_ON_DELAY 1
