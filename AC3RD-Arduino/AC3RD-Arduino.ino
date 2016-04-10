@@ -39,6 +39,7 @@ double currGPSLat;
 double currGPSLon;
 double currGPSangle;
 float heading; //from IMU angle with true north
+float headingDirect;
 float headingDesired;
 double windDir;
 double tailDir;
@@ -137,47 +138,42 @@ void main(Task* me){
   // Get heading from IMU
   // heading is the angle of the IMU with true north
   heading=compass.read();
-  //find wingAngle with reference to absolute north
+  // Read the tail angle, should begin at zero
+  tailAngle=tailservo.read();
+  //find wingAngle with reference to the front of the boat
   //attach potentiometers such that 90 on front is front of boat and 90 on back is the back of the boat 
   int frontPotAngle= (map(analogread(potPinFront),0, 1023, 0, 330)
   int backPotAngle= (map(analogread(potPinBack), 0, 1023, 0, 330))
   if (frontPotAngle>=0 && frontPotAngle<=180)
     {wingAngle=frontPotAngle-90}
   else if (backPotAngle>=0 && backPotAngle<=180)
-    {wingAngle=backPotAngle+90}
-  
+    {wingAngle=backPotAngle+90} //Hi cutie ;)
   //know wind direction
-  windDir=heading-wingAngle-tailAngle
- 
+  windDir=heading+wingAngle+tailAngle //this depends on us correctly orienting the servo 
+
+  // have the heading, wind direction and goal GPS location. Next need to know the direct heading
   // Calculate the heading to Goal GPS location
   double lonDiff = goalGPSLon - currGPSLon;
   double latDiff = goalGPSLat - currGPSLat;
   //convert this to an angle or we might be able to pull angles directly
-  double angleDiff=goalGPSangle-currGPSangle
-  headingDesired=
+  double angleDiff=goalGPSangle-currGPSangle;
+  headingDirect=;
   
 // we cannot go anywhere withing 45 degrees of the wind
 // if the desired, most direct heading is not within 45 degrees of the wind, want to go in the direction of desired heading 
-  if (abs(windDir-headingDesired)>=45)
-  {}
-  else if 
-  //know the heading in global and the mask angle in reference to hull (heading)
+  if (headingDirect<=-windDir+45 && headingDesired>=-windDir-45)
+    {if (headingDirect-(-windDir+45)<=headingDirect-(windDir-45))
+      {headingDesired=headingDirect-(-wondDir+45)}
+      else {headingDesired=headingDirect-(-windDir-45)}
+    }
+  else {headingDirect=headingDesired};
 
- // Compare to possible headings and select best. This will use the wind vector 
-
-  double goalHeading= //vector sum lonDiff and latDiff
-  // need the angle difference between the goal heading and the current heading
-  headingAngleDiff= goalHeading- heading
-  //turn tail by the negative of the headingAngleDiff, assuming we are looking at that ratio still
-  tailAngle= -headingAngleDiff
-  // Set tail angle
-  tailservo.write(tailAngle);
+  //give angle of attack, descide positive or negative 5 degrees
+  
+  //move rudder such that boat moves in direction of desired heading 
 
   //Set rudder angle
   rudderservo.write(rudderAngle);
-}
-
-
 
 //read sail angle from rotary encoder
 
