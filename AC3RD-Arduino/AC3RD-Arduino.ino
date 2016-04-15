@@ -147,7 +147,7 @@ void main(Task* me){
   if (frontPotAngle>=0 && frontPotAngle<=180)
     {wingAngle=frontPotAngle-90}
   else if (backPotAngle>=0 && backPotAngle<=180)
-    {wingAngle=backPotAngle+90} //Hi cutie ;)
+    {wingAngle=backPotAngle+90} 
   //know wind direction
   windDir=heading+wingAngle+tailAngle //this depends on us correctly orienting the servo 
 
@@ -168,14 +168,18 @@ void main(Task* me){
     }
   else {headingDirect=headingDesired};
 
-  //give angle of attack, descide positive or negative 5 degrees
-  
-  //move rudder such that boat moves in direction of desired heading 
+  //generate a force in the forward direction
+  if (-windDir-heading>=0)
+      {tailAngle=5}
+    else {tailAngle=-5}
+
+  //give angle of attack, decide positive or negative 5 degrees
+
+  tailservo.write(tailAngle);
+  //choose rudder angle
 
   //Set rudder angle
   rudderservo.write(rudderAngle);
 
-//read sail angle from rotary encoder
 
-// Updates global variables 
 
