@@ -1,4 +1,6 @@
 /*
+Val: This code just reads IMU data and writes it onto an SD card.
+
 The sensor outputs provided by the library are the raw 16-bit values
 obtained by concatenating the 8-bit high and low gyro data registers.
 They can be converted to units of dps (degrees per second) using the
