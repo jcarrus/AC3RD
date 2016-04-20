@@ -1,105 +1,87 @@
-/* This project
- *
- *
- *
- */
-
-
-// Include library for GPS
-//#include "Adafruit_GPS.h"
-
-//Include library for IMU
-#include "LPS.h"
-#include "LSM303.h"
-#include "L3G.h"
-#include "wire.h"
-
- 
-//create variables
-double currGPSLat;
-double currGPSLon;
-double currGPSangle;
-float heading;
-double windDir;
-double tailDir;
-double wingAngle;
-double rudderAngle;
-
-// put a glass over the wind sendor to calibrate it. adjust the zeroWindAdjustmet until sensor reads about zero
-//wind sensor calibration- need a 5V power source to wind sensor
-//const float zeroWindAdjustment =  0; // negative numbers yield smaller wind speeds and vice versa.
-
-//int TMP_Therm_ADunits;  //temp termistor value from wind sensor
-//float RV_Wind_ADunits;    //RV output from wind sensor 
-//float RV_Wind_Volts;
-//unsigned long lastMillis;
-//int TempCtimes100;
-//float zeroWind_ADunits;
-//float zeroWind_volts;
-//float WindSpeed_MPH;
-
-void setup(){
-  Serial.begin(9600);
-
-  IMU
-  wire.begin();
-  compass.init();
-  compass.enableDefault();
-  /*
-  Calibration values; the default values of +/-32767 for each axis
-  lead to an assumed magnetometer bias of 0. Use the Calibrate example
-  program to determine appropriate values for your particular unit.
-  */
-  compass.m_min = (LSM303::vector<int16_t>){-32767, -32767, -32767};
-  compass.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
-
-  // GPS
-  //GPS.begin(9600)
-
-  //include various configurations, need to set up the actual arduino
-  //include pinModes
-}
-
 /*
- void getCurrentGPS(Task* me){
+The sensor outputs provided by the library are the raw 16-bit values
+obtained by concatenating the 8-bit high and low gyro data registers.
+They can be converted to units of dps (degrees per second) using the
+conversion factors specified in the datasheet for your particular
+device and full scale setting (gain).
 
-  // Do stuff to talk to GPS module- even if the position stays the same, want the data
-  //parse data given in a NMEA string
-  GPS.parse(GPS.lastNMEA());
-  //get desired data
-  currGPSLat =GPS.latitude() ;
-  currGPSLon =GPS.longitude() ;
-  currGPSangle=GPS.angle();
-}
+Example: An L3GD20H gives a gyro X axis reading of 345 with its
+default full scale setting of +/- 245 dps. The So specification
+in the L3GD20H datasheet (page 10) states a conversion factor of 8.75
+mdps/LSB (least significant bit) at this FS setting, so the raw
+reading of 345 corresponds to 345 * 8.75 = 3020 mdps = 3.02 dps.
 */
 
-//Main task controls the motion of the boat
-void loop(){
-  // Get heading from IMU
-  heading=compass.read();
-  headingLon=
-  headingLat=
-  // Calculate the heading to Goal GPS location
-  //double lonDiff = goalGPSLon - currGPSLon;
- // double latDiff = goalGPSLat - currGPSLat;
+#include <Wire.h>
+#include <L3G.h>
+#include <SD.h>
+#include <LSM303.h>
 
- // Compare to possible headings and select best. This will use the wind vector 
-/*
-  double goalHeading= //vector sum lonDiff and latDiff
-  // need the angle difference between the goal heading and the current heading
-  headingAngleDiff= goalHeading- heading
-  //turn tail by the negative of the headingAngleDiff, assuming we are looking at that ratio still
-  tailAngle= -headingAngleDiff
-  // Set tail angle
-  tailservo.write(tailAngle);
+L3G gyro;
+LSM303 compass;
 
-  //Set rudder angle
-  //rudderservo.write(rudderAngle);
+const int chipSelect = 10;
+char report[80];
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+
+  if (!gyro.init())
+  {
+    Serial.println("Failed to autodetect gyro type!");
+    while (1);
+  }
+
+  gyro.enableDefault();
+  compass.init();
+  compass.enableDefault();
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+  Serial.print("Initializing SD card...");
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
 }
 
-*?
+void loop() {
+    gyro.read();
+    compass.read();
+    snprintf(report, sizeof(report), "A: %6d %6d %6d    M: %6d %6d %6d",
+    compass.a.x, compass.a.y, compass.a.z,
+    compass.m.x, compass.m.y, compass.m.z);
+    String dataString = "";
+    dataString = "Gyro: " + String((int)gyro.g.x) + ", " + String((int)gyro.g.y) + ", " + String((int)gyro.g.z) 
+    + "  " + report;
 
-//read sail angle from rotary encoder
+    File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    if (dataFile) {
+      dataFile.println(dataString);
+      dataFile.close();
+      // print to the serial port too:
+      Serial.println(dataString);
+  }
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.println("error opening datalog.txt");
+  }
 
-// Updates global variables 
 
+
+
+//  Serial.print("G ");
+//  Serial.print("X: ");
+//  Serial.print((int)gyro.g.x);
+//  Serial.print(" Y: ");
+//  Serial.print((int)gyro.g.y);
+//  Serial.print(" Z: ");
+//  Serial.println((int)gyro.g.z);
+
+  delay(100);
+}
