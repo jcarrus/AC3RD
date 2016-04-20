@@ -11,7 +11,6 @@
 SoftwareSerial Xbee(2,3); //RX TX
 // Include library for GPS
 #include "Adafruit_GPS.h"
-
 // Include library for IMU
 //#include "LPS.h"
 #include "LSM303.h"
@@ -90,13 +89,13 @@ void setup(Task*me){
 
 void getGoalGPS(Task*me){
 
-//Communicates with Xbee granted input "lat,lon"
+  //Communicates with Xbee granted input "lat,lon"
   while (Serial.available()>0)
   goalGPSlon= Serial.parseInt();
   goalGPSlat= Serial.parseInt();
  } 
 
- void getCurrentGPS(Task* me){
+void getCurrentGPS(Task* me){
 
   // Do stuff to talk to GPS module- even if the position stays the same, want the data
   //parse data given in a NMEA string
@@ -142,8 +141,8 @@ void main(Task* me){
   tailAngle=tailservo.read();
   //find wingAngle with reference to the front of the boat
   //attach potentiometers such that 90 on front is front of boat and 90 on back is the back of the boat 
-  int frontPotAngle= (map(analogread(potPinFront),0, 1023, 0, 330)
-  int backPotAngle= (map(analogread(potPinBack), 0, 1023, 0, 330))
+  int frontPotAngle= (map(analogread(potPinFront),0, 1023, 0, 330);
+  int backPotAngle= (map(analogread(potPinBack), 0, 1023, 0, 330));
   if (frontPotAngle>=0 && frontPotAngle<=180)
     {wingAngle=frontPotAngle-90}
   else if (backPotAngle>=0 && backPotAngle<=180)
