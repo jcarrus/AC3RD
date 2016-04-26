@@ -121,7 +121,8 @@ Servo tailServo;
 Servo rudderServo;
 int tailAngle;
 int rudderAngle;
-int kRudder;
+int kRudder; 
+int rudderControl;
 void setupServo(){
 	tailServo.attach(TAIL_PIN);
   rudderServo.attach(RUDDER_PIN);
@@ -168,6 +169,7 @@ void getWindAngle(){
 Task fastTask(10, fast);
 Task mainTask(50, main);
 Task commTask(200, comm);
+Task rudderTask(10, rudder);
 
 ///////////
 // Setup //
@@ -186,6 +188,8 @@ float headingDirect;
 float headingDesired;
 
 void main(Task* me){
+  getGPS();
+  measure(gpsLat, gpsLon, goalGPSLat, goalGPSLon);
 	// If we are at the destination, stop
 	if (distToGoal < goalGPSTolerance){
 		rudderServo.write(rudderServoMax);
@@ -232,16 +236,23 @@ void main(Task* me){
 }
 
 void rudder(Task* me){
+  if rudderControl==1{
 	// Simple proportional controller with feedback
-	if ((abs(heading - headingDesired) < 180 && heading > headingDesired) ||
-   		 abs(heading - headingDesired) > 180 && heading < headingDesired)){
-		setRudderAngle(-kRudder * abs(heading - headingDesired));
-	} else {
-		setRudderAngle( kRudder * abs(heading - headingDesired));
-	}
+	 if ((abs(heading - headingDesired) < 180 && heading > headingDesired) ||
+   		abs(heading - headingDesired) > 180 && heading < headingDesired)){
+		  setRudderAngle(-kRudder * abs(heading - headingDesired));
+	 }  
+    else {
+		  setRudderAngle( kRudder * abs(heading - headingDesired));
+	 }
+  }
+
+
+  if rudderControl==2{
+  //Another type of rudder control
+
+  }
 }
-
-
 
 char buf[8];
 void comm(Task* me){
