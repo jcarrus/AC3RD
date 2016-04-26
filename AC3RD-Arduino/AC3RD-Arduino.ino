@@ -23,11 +23,11 @@ void setupXBee(){
 #include "Adafruit_GPS.h"
 int deadZone = (int) 45 * PI / 180;
 double goalGPSTolerance;
-double goalGPSLat;
-double goalGPSLon;
+float goalGPSLat;
+float goalGPSLon;
 int headingToGoal;
-double gpsLat; 
-double gpsLon;
+float gpsLat; 
+float gpsLon;
 int gpsHeading;
 void getGPS(){
   // Do stuff to talk to GPS module- even if the position stays the same, want the data
@@ -121,6 +121,7 @@ Servo tailServo;
 Servo rudderServo;
 int tailAngle;
 int rudderAngle;
+int kRudder;
 void setupServo(){
 	tailServo.attach(TAIL_PIN);
   rudderServo.attach(RUDDER_PIN);
@@ -249,27 +250,44 @@ void comm(Task* me){
 			buf[i] = (char) XBee.read();
 		}
 		switch (buffer){
-		// gla: set goal latitude
+		// setglat: set goal latitude
 		case "setglat":
+      goalGPSLat = commReadInt();
 			break;
+    //getglat: get goal latitude
 		case "getglat":
+      Xbee.read();
+      Xbee.println(goalGPSLat);
 			break;
-		// glo: set goal longitude
+		// setglon: set goal longitude
 		case "setglon":
+      goalGPSLon = commReadInt();
 			break;
+    //getglon: gets goal GPS Longitude from Xbee
 		case "getglon":
+      Xbee.read();
+      Xbee.println(goalGPSLon);
 			break;
+    //setdzne: sets the value of the deadzone
 		case "setdzne":
+      deadZone = commReadInt();
 		  break;
+    //gets the value of the deadzone
 		case "getdzne":
+      XBee.read();
+      XBee.println(deadZone);
 			break;
+    //setrcon: sets the type of rudder control we are using
 		case "setrcon":
 			break;
+    //getrcon: gets the # associated with the type of rudder control in use
 		case "getrcon":
 			break;
+    //setkrud: sets the rudder gain for rudder controller
 		case "setkrud":
 			kRudder = commReadInt();
 			break;
+    //getkrud: gets the rudder gain from Xbee
 		case "getkrud":
 			XBee.read();
 			XBee.println(kRudder);
