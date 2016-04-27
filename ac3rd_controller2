@@ -1,0 +1,4 @@
+Manual controll for sailboat
+AOA	Tail angle	3	SLIDER	X Axis	0	1.0	0.1
+R_A	Rudder angle	3	SLIDER	Z Axis	0	1.0	0.01
+autoSwitch	boolean for auto control	1	BUTTON	Button 0	0	0.0	0.0
