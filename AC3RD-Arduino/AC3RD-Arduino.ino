@@ -162,33 +162,37 @@ void getWindAngle(){
   windDir = (heading + wingAngle + tailAngle) % 360; // Points into the wind
 }
 
-
-///////////////////////
-// Task Declarations //
-///////////////////////
-Task fastTask(10, fast);
-Task mainTask(50, main);
-Task commTask(200, comm);
-Task rudderTask(10, rudder);
-
 ///////////
 // Setup //
 ///////////
 
-void setup(Task*me){
+void setup(){
 	setupXBee();
 	setupIMU();
 	setupServo();
-	SoftTimer.add(&fastTask);
-	SoftTimer.add(&commTask);
-  SoftTimer.add(&mainTask);
 }
 
 float headingDirect;
 float headingDesired;
 
-void main(Task* me){
-  getGPS();
+void loop(){
+
+  // comm checks the communication channels for commands
+  comm();
+
+  // sense reads sensors and updates values
+  sense();
+  
+  // navigate sets a desired heading
+  navigate();
+
+  // tail sets manages the tail angle for forward motion
+  tail();
+
+  // rudder manages the rudder angles for the desired heading
+  rudder();
+}
+
   measure(gpsLat, gpsLon, goalGPSLat, goalGPSLon);
 	// If we are at the destination, stop
 	if (distToGoal < goalGPSTolerance){
@@ -235,9 +239,9 @@ void main(Task* me){
 	}
 }
 
-void rudder(Task* me){
-  if rudderControl==1{
-	// Simple proportional controller with feedback
+void rudder(){
+  if (rudderControl==1){
+	 // Simple proportional controller with feedback
 	 if ((abs(heading - headingDesired) < 180 && heading > headingDesired) ||
    		abs(heading - headingDesired) > 180 && heading < headingDesired)){
 		  setRudderAngle(-kRudder * abs(heading - headingDesired));
@@ -248,14 +252,20 @@ void rudder(Task* me){
   }
 
 
-  if rudderControl==2{
-  //Another type of rudder control
-
+  if (rudderControl==2){
+    //PD controller
+    if ((abs(heading - headingDesired) < 180 && heading > headingDesired) ||
+         abs(heading - headingDesired) > 180 && heading < headingDesired)){
+      setRudderAngle(-kRudder * abs(heading - headingDesired)-); // Needs more stuff
+    }  
+    else {
+      setRudderAngle( kRudder * abs(heading - headingDesired)-); // Needs more stuff
+    } 
   }
 }
 
 char buf[8];
-void comm(Task* me){
+void comm(){
 	if (XBee.available() >= 7){
 		for (int i = 0; i < 3; i++){
 			buf[i] = (char) XBee.read();
@@ -303,6 +313,14 @@ void comm(Task* me){
 			XBee.read();
 			XBee.println(kRudder);
 			break;
+    // nvmd: navigation mode
+    //       1 - GPS navigation
+    //       2 - Heading navigation
+    //       3 - Wind offset navigation
+    case "getgnav":
+
+      break;
+
 		}
 	}
 }
