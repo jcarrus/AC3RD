@@ -3,63 +3,64 @@
  * Gilligan, Jorlyn LeGarrec, Justin Carrus, Trevor Day, and Val Peng.
  */
 
-///////////////////
-// Timer Library //
-///////////////////
-#include "SoftTimer.h"
-
 //////////
 // XBee //
 //////////
-#include "SoftwareSerial.h"
+#include <SoftwareSerial.h>
 SoftwareSerial Xbee(2,3); //RX TX
 void setupXBee(){
-	XBee.begin(9600);
+	//XBee.begin(9600);
+  Serial.begin(9600);
 }
+
 
 /////////
 // GPS //
 /////////
+
 #include "Adafruit_GPS.h"
-int deadZone = (int) 45 * PI / 180;
+SoftwareSerial gpsSerial(3, 2);
+Adafruit_GPS GPS(&gpsSerial);
+#define PI 3.14159
+#define RADIUS_EARTH 6378.137
+int deadZone = (int) (45 * PI / 180);
 double goalGPSTolerance;
 float goalGPSLat;
 float goalGPSLon;
 int headingToGoal;
 float gpsLat; 
 float gpsLon;
-int gpsHeading;
-void getGPS(){
+void readGPS(){
   // Do stuff to talk to GPS module- even if the position stays the same, want the data
   //parse data given in a NMEA string
   GPS.parse(GPS.lastNMEA());
   //get desired data
-  gpsLat     = GPS.latitude();
-  gpsLon     = GPS.longitude();
-  gpsHeading = GPS.angle();
+  gpsLat     = GPS.latitude;
+  gpsLon     = GPS.longitude;
 }
-void measure(double lat1, double lon1, double lat2, double lon2){
-	double R = 6378.137; // Radius of earth in KM
+int gpsDistanceTo(double lat1, double lon1, double lat2, double lon2){
 	double dLat = (lat2 - lat1) * PI / 180;
 	double dLon = (lon2 - lon1) * PI / 180;
 	double a = pow(sin(dLat/2), 2) + cos(lat1 * PI / 180) * cos(lat2 * PI / 180) * pow(sin(dLon/2), 2);
 	double c = 2 * atan2(sqrt(a), sqrt(1-a));
-	distToGoal = R * c * 1000; // meters
+	return (int) (RADIUS_EARTH * c * 1000); // meters
+}
+int gpsAngleTo(double lat1, double lon1, double lat2, double lon2){
+	double dLon = (lon2 - lon1) * PI / 180;
 	double x = cos(lat2) * sin(dLon);
 	double y = cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dLon);							
-	headingToGoal = (int) (atan2(x, y) / PI * 180); // degrees
+	return (int) (atan2(x, y) / PI * 180); // degrees
 }
-
 
 /////////
 // IMU //
 /////////
 #include "LSM303.h"
-#include "wire.h"
+#include "Wire.h"
 LSM303 imu;
 float heading;
 void setupIMU(){	
-	wire.begin();
+	Wire.begin();
   imu.init();
   imu.enableDefault();
   /*
@@ -69,17 +70,19 @@ void setupIMU(){
   */
   imu.m_min = (LSM303::vector<int16_t>){-32767, -32767, -32767};
   imu.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
-	SoftTimer.add(&taskIMU);
 }
-void taskIMU(Task* me){
-	heading=imu.read();
+void readIMU(){
 	imu.read();
+	heading = imu.heading((LSM303::vector<int>){1, 0, 0});
+	Serial.println(heading);
+	/*
 	Xbee.print(imu.a.x);
 	Xbee.print(',');
 	Xbee.print(imu.a.y);
 	Xbee.print(',');
 	Xbee.print(imu.a.z);
 	Xbee.print('\n');
+	*/
 }
 
 /////////////////
@@ -91,6 +94,8 @@ void taskIMU(Task* me){
 // put a glass over the wind sendor to calibrate it.  adjust the
 // zeroWindAdjustmet until sensor reads about zero wind sensor
 // calibration- need a 5V power source to wind sensor
+#define WIND_TMP_PIN 0
+#define WIND_SPD_PIN 0
 float zeroWindAdjustment =  0;
 float temp_raw;
 float RV_Wind_ADunits;
@@ -105,7 +110,7 @@ void getWind(){
 	temp_raw = (float) analogRead(WIND_TMP_PIN);
 	RV_Wind_ADunits = (float) analogRead(WIND_SPD_PIN);
 	RV_Wind_Volts = (RV_Wind_ADunits * 0.0048828125);
-	TempCtimes100 = ((0.005 * (temp_raw * temp_raw)) - (16.862 * temp_raw) + 9075.4) / 100;
+	float TempCtimes100 = ((0.005 * (temp_raw * temp_raw)) - (16.862 * temp_raw) + 9075.4) / 100;
 	zeroWind_ADunits = -0.0006*(temp_raw * temp_raw) + 1.0727 * temp_raw + 47.172;
 	zeroWind_volts = (zeroWind_ADunits * 0.0048828125) - zeroWindAdjustment;  
 	windSpeed =  pow(((RV_Wind_Volts - zeroWind_volts) /.2300) , 2.7265) * 0.44704; 
@@ -114,7 +119,7 @@ void getWind(){
 ////////////
 // Servos //
 ////////////
-#include "servo.h"
+#include <Servo.h>
 #define TAIL_PIN 5
 #define RUDDER_PIN 6
 Servo tailServo;
@@ -123,6 +128,7 @@ int tailAngle;
 int rudderAngle;
 int kRudder; 
 int rudderControl;
+int headingDesired;
 void setupServo(){
 	tailServo.attach(TAIL_PIN);
   rudderServo.attach(RUDDER_PIN);
@@ -152,8 +158,8 @@ double wingAngle;
 int frontPotAngle;
 int rearPotAngle;
 void getWindAngle(){
-	frontPotAngle = map(analogread(POT_PIN_1), 0, 1023, 0, 330);
-	rearPotAngle  = map(analogread(POT_PIN_2), 0, 1023, 0, 330);
+	frontPotAngle = map(analogRead(POT_PIN_1), 0, 1023, 0, 330);
+	rearPotAngle  = map(analogRead(POT_PIN_2), 0, 1023, 0, 330);
   if (frontPotAngle >= 0 && frontPotAngle <= 200){
 		wingAngle = frontPotAngle - 90;
 	} else {
@@ -177,23 +183,29 @@ float headingDesired;
 
 void loop(){
 
-  // comm checks the communication channels for commands
-  comm();
-
   // sense reads sensors and updates values
-  sense();
+  //sense();
+	readIMU();
   
   // navigate sets a desired heading
-  navigate();
+  //navigate();
 
   // tail sets manages the tail angle for forward motion
-  tail();
+  //tail();
 
   // rudder manages the rudder angles for the desired heading
-  rudder();
+  //rudder();
+
+	// comm checks the communication channels for commands
+  //comm();
+
 }
 
-  measure(gpsLat, gpsLon, goalGPSLat, goalGPSLon);
+void sense(){
+}
+
+void navigate(){
+  gpsDistanceTo(gpsLat, gpsLon, goalGPSLat, goalGPSLon);
 	// If we are at the destination, stop
 	if (distToGoal < goalGPSTolerance){
 		rudderServo.write(rudderServoMax);
@@ -237,6 +249,10 @@ void loop(){
 	}	else {
 		setTailAngle( liftTailAngle);
 	}
+}
+
+void tail(){
+
 }
 
 void rudder(){

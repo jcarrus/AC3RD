@@ -1,14 +1,16 @@
 #include <Wire.h>
-#include <LSM303.h>
+#include "LSM303.h"
 
 LSM303 compass;
 
 void setup() {
   Serial.begin(9600);
   Wire.begin();
+  Serial.println("Working");
   compass.init();
   compass.enableDefault();
-  
+
+  Serial.println("Done working");
   /*
   Calibration values; the default values of +/-32767 for each axis
   lead to an assumed magnetometer bias of 0. Use the Calibrate example
