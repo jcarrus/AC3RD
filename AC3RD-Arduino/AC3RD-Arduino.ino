@@ -54,26 +54,69 @@ int gpsAngleTo(double lat1, double lon1, double lat2, double lon2){
 /////////
 // IMU //
 /////////
+#include <Wire.h>
 #include "./LSM303.h"
-#include "Wire.h"
+#include "./L3G.h"
 LSM303 imu;
+L3G gyro;
 int heading;
 void setupIMU(){	
 	Wire.begin();
-  imu.init();
+  if (!imu.init()){
+		Serial.println("904");
+	}
   imu.enableDefault();
   /*
   Calibration values; the default values of +/-32767 for each axis
   lead to an assumed magnetometer bias of 0. Use the Calibrate example
   program to determine appropriate values for your particular unit.
   */
-  imu.m_min = (LSM303::vector<int16_t>){-2336, -2481, -2576};
-  imu.m_max = (LSM303::vector<int16_t>){+2694, +2241, +2484};
+  imu.m_min = (LSM303::vector<int16_t>){-32767, -32767, -32767};
+  imu.m_max = (LSM303::vector<int16_t>){+32767, +32767, +32767};
+	if (!gyro.init()){
+		Serial.println("905");
+	}
+	gyro.enableDefault();
 }
 void readHeading(){
 	imu.read();
 	heading = imu.heading((LSM303::vector<int>){-1, 0, 0});
 }
+void readGyro(){
+	gyro.read();
+}
+int calibrationLength = 15000;
+void calibrateMagnetometer(){
+  imu.m_min = (LSM303::vector<int16_t>) {-32767, -32767, -32767};
+  imu.m_max = (LSM303::vector<int16_t>) { 32767,  32767,  32767};
+  long int endTime = millis() + calibrationLength;
+	LSM303::vector<int16_t> running_min = { 32767,  32767,  32767};
+	LSM303::vector<int16_t> running_max = {-32768, -32768, -32768};
+  while (millis() < endTime){
+		imu.read();
+		running_min.x = min(running_min.x, imu.m.x);
+		running_min.y = min(running_min.y, imu.m.y);
+		running_min.z = min(running_min.z, imu.m.z);
+		running_max.x = max(running_max.x, imu.m.x);
+		running_max.y = max(running_max.y, imu.m.y);
+		running_max.z = max(running_max.z, imu.m.z);
+  }
+	imu.m_min = running_min;
+  imu.m_max = running_max;
+	Serial.print(imu.m_min.x);
+	Serial.print(',');
+	Serial.print(imu.m_min.y);
+	Serial.print(',');
+	Serial.print(imu.m_min.z);
+	Serial.print(',');
+	Serial.print(imu.m_max.x);
+	Serial.print(',');
+	Serial.print(imu.m_max.y);
+	Serial.print(',');
+	Serial.print(imu.m_max.z);
+	Serial.println();
+}
+
 
 /////////////////
 // Wind Sensor //
@@ -169,6 +212,7 @@ int tailAngle;
 void sense(){
   readWingAngle();
   readHeading();
+  readGyro();
   windDir = (heading + wingAngle + tailAngle) % 360; // Points into the wind
 }
 
@@ -180,7 +224,7 @@ int distToGoal = 999999;
 int headingDesired;
 int tailServoMax = 90;
 int tailServoZero;
-int liftTailAngle = 30;
+int liftTailAngle = 15;
 int routeChoice = 0;
 int navigationMode = 1;
 void setHeading(int h){
@@ -214,17 +258,17 @@ int suggestHeading(int h){
   }
 }
 void navigate(){
-  // Mode 0 maintains a straight line
   switch (navigationMode) {
-    // 0 - Passive Sailing
     case 0:
+			// Passive Sailing
       setHeading(heading);
       break;
-    // 1 - Maintain a heading (managed by communicate
     case 1:
+			// Maintain a heading (managed by communicate)
       setHeading(suggestHeading(headingToGoal));
       break;
     case 2:
+			// GPS navigation
       gpsDistanceTo(gpsLat, gpsLon, goalGPSLat, goalGPSLon);
       // If we are at the destination, stop
       if (distToGoal < goalGPSTolerance){
@@ -239,17 +283,28 @@ void navigate(){
 // Sail //
 //////////
 
+int tailControl = 1;
 void setTailAngle(int a){
   tailServo.write(tailServoOffset + tailServoDir*a);
   tailAngle = a;
 }
 void sail(){
-  //generate a force in the forward direction
-  if ((abs(headingDesired - windDir) < 180 && headingDesired > windDir) ||
-      (abs(headingDesired - windDir) > 180 && headingDesired < windDir)){
-    setTailAngle(-liftTailAngle);
-  } else {
-    setTailAngle( liftTailAngle);
+  switch (tailControl) {
+    case 0:
+			// Manual control depends on serial communication
+      break;
+    case 1:
+			// Sail for forward motion
+      if ((abs(headingDesired - windDir) < 180 && headingDesired > windDir) ||
+          (abs(headingDesired - windDir) > 180 && headingDesired < windDir)){
+        setTailAngle(-liftTailAngle);
+      } else {
+        setTailAngle( liftTailAngle);
+      }
+      break;
+    default:
+      Serial.println("902");
+    break;
   }
 }
 
@@ -263,7 +318,6 @@ int rudderServoZero;
 int kRudder = 5;
 int maxRudderAngle = 45;
 void setRudderAngle(int a){
-  Serial.println(a);
   a = min(a, maxRudderAngle);
   a = max(a, -maxRudderAngle);
   rudderServo.write(rudderServoOffset + rudderServoDir*a);
@@ -271,7 +325,10 @@ void setRudderAngle(int a){
 }
 void turn(){
   switch (rudderControl){
-    case 1:
+  	case 0:
+			// Manual Control depends on serial commands
+		  break;
+	  case 1:
 	    // Simple proportional controller with feedback
 	    if (((abs(heading - headingDesired) < 180) && (heading > headingDesired)) ||
    		    ((abs(heading - headingDesired) > 180) && (heading < headingDesired))){
@@ -291,7 +348,7 @@ void turn(){
       }
       break;
     default:
-      Serial.println("902");
+      Serial.println("903");
     break;
   }
 }
@@ -308,8 +365,10 @@ int commReadInt(){
     str += (char) Serial.read();
   }
   Serial.read();
-  Serial.println(str);
   return str.toInt();
+}
+void gobbleCommand(){
+	while (Serial.read() != '\n'){}
 }
 void communicate(){
   if (Serial.available()){
@@ -323,24 +382,30 @@ void communicate(){
     }
     Serial.read();
     commCode = str.toInt();
+		Serial.println(commCode);
     switch (commCode){
       //  0 -  9 are navigation commands
       case 1:
         headingToGoal = commReadInt();
         break;
+      case 2:
+        setTailAngle(commReadInt());
+        break;
+		  case 3:
+				setRudderAngle(commReadInt());
 
       // 10 - 30 are configuration commands
       case 10:
         zeroServos();
-        Serial.read();
+        gobbleCommand();
         break;
       case 11:
         tailServoFlip();
-        Serial.read();
+        gobbleCommand();
         break;
       case 12:
         rudderServoFlip();
-        Serial.read();
+        gobbleCommand();
         break;
       case 13:
         setTailAngle(commReadInt());
@@ -359,63 +424,19 @@ void communicate(){
       case 17:
         maxRudderAngle = commReadInt();
         break;
-      default:
+		  case 18:
+				tailControl = commReadInt();
+		  case 19:
+				rudderControl = commReadInt();
+      case 20:
+        calibrateMagnetometer();
+        gobbleCommand();
+		  default:
         Serial.println("902");
       break;
     }
-
-    /*
-		// setglat: set goal latitude
-		case "setglat":
-      goalGPSLat = commReadInt();
-			break;
-    //getglat: get goal latitude
-		case "getglat":
-      Serial.read();
-      Serial.println(goalGPSLat);
-			break;
-		// setglon: set goal longitude
-		case "setglon":
-      goalGPSLon = commReadInt();
-			break;
-    //getglon: gets goal GPS Longitude from Serial
-		case "getglon":
-      Serial.read();
-      Serial.println(goalGPSLon);
-			break;
-    //setdzne: sets the value of the deadzone
-		case "setdzne":
-      deadZone = commReadInt();
-		  break;
-    //gets the value of the deadzone
-		case "getdzne":
-      Serial.read();
-      Serial.println(deadZone);
-			break;
-    //setrcon: sets the type of rudder control we are using
-		case "setrcon":
-			break;
-    //getrcon: gets the # associated with the type of rudder control in use
-		case "getrcon":
-			break;
-    //setkrud: sets the rudder gain for rudder controller
-		case "setkrud":
-			kRudder = commReadInt();
-			break;
-    //getkrud: gets the rudder gain from Serial
-		case "getkrud":
-			Serial.read();
-			Serial.println(kRudder);
-			break;
-    // nvmd: navigation mode
-    //       1 - GPS navigation
-    //       2 - Heading navigation
-    //       3 - Wind offset navigation
-    case "getgnav":
-
-      break;
-*/
   }
+	
   Serial.print(millis());
   Serial.print(',');
   Serial.print(tailAngle);
@@ -443,6 +464,12 @@ void communicate(){
   Serial.print(imu.m.y);
   Serial.print(',');
   Serial.print(imu.m.z);
+  Serial.print(',');
+  Serial.print(gyro.g.x * 8.75);
+  Serial.print(',');
+  Serial.print(gyro.g.y * 8.75);
+  Serial.print(',');
+  Serial.print(gyro.g.z * 8.75);
   Serial.print('\n');
 }
 
