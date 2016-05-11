@@ -9,10 +9,6 @@ Written by Limor Fried/Ladyada for Adafruit Industries.
 BSD license, check license.txt for more information
 All text above must be included in any redistribution
 ****************************************/
-#ifdef __AVR__
-  // Only include software serial on AVR platforms (i.e. not on Due).
-  #include <SoftwareSerial.h>
-#endif
 #include "./Adafruit_GPS.h"
 
 // how long are max NMEA lines to parse?
@@ -267,17 +263,10 @@ char Adafruit_GPS::read(void) {
   char c = 0;
   
   if (paused) return c;
-
-#ifdef __AVR__
-  if(gpsSwSerial) {
-    if(!gpsSwSerial->available()) return c;
-    c = gpsSwSerial->read();
-  } else 
-#endif
-  {
-    if(!gpsHwSerial->available()) return c;
-    c = gpsHwSerial->read();
-  }
+	
+	if(!gpsHwSerial->available()) return c;
+	c = gpsHwSerial->read();
+  
 
   //Serial.print(c);
 
@@ -310,19 +299,6 @@ char Adafruit_GPS::read(void) {
   return c;
 }
 
-#ifdef __AVR__
-// Constructor when using SoftwareSerial or NewSoftSerial
-#if ARDUINO >= 100
-Adafruit_GPS::Adafruit_GPS(SoftwareSerial *ser)
-#else
-Adafruit_GPS::Adafruit_GPS(NewSoftSerial *ser) 
-#endif
-{
-  common_init();     // Set everything to common state, then...
-  gpsSwSerial = ser; // ...override gpsSwSerial with value passed.
-}
-#endif
-
 // Constructor when using HardwareSerial
 Adafruit_GPS::Adafruit_GPS(HardwareSerial *ser) {
   common_init();  // Set everything to common state, then...
@@ -331,9 +307,6 @@ Adafruit_GPS::Adafruit_GPS(HardwareSerial *ser) {
 
 // Initialization code used by all constructor types
 void Adafruit_GPS::common_init(void) {
-#ifdef __AVR__
-  gpsSwSerial = NULL; // Set both to NULL, then override correct
-#endif
   gpsHwSerial = NULL; // port pointer in corresponding constructor
   recvdflag   = false;
   paused      = false;
@@ -352,23 +325,12 @@ void Adafruit_GPS::common_init(void) {
 
 void Adafruit_GPS::begin(uint16_t baud)
 {
-#ifdef __AVR__
-  if(gpsSwSerial) 
-    gpsSwSerial->begin(baud);
-  else 
-    gpsHwSerial->begin(baud);
-#endif
-
+	gpsHwSerial->begin(baud);
   delay(10);
 }
 
 void Adafruit_GPS::sendCommand(const char *str) {
-#ifdef __AVR__
-  if(gpsSwSerial) 
-    gpsSwSerial->println(str);
-  else    
-#endif
-    gpsHwSerial->println(str);
+	gpsHwSerial->println(str);
 }
 
 boolean Adafruit_GPS::newNMEAreceived(void) {
@@ -451,7 +413,7 @@ boolean Adafruit_GPS::LOCUS_ReadStatus(void) {
 	   (response[0] != '*') && (response[0] != 0)) {
       parsed[i] *= 10;
       char c = response[0];
-      if (isDigit(c))
+      if (isdigit(c))
         parsed[i] += c - '0';
       else
         parsed[i] = c;
@@ -460,7 +422,7 @@ boolean Adafruit_GPS::LOCUS_ReadStatus(void) {
   }
   LOCUS_serial = parsed[0];
   LOCUS_type = parsed[1];
-  if (isAlpha(parsed[2])) {
+  if (isalpha(parsed[2])) {
     parsed[2] = parsed[2] - 'a' + 10; 
   }
   LOCUS_mode = parsed[2];
